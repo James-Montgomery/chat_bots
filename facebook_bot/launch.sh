@@ -3,7 +3,7 @@
 echo "Launching Bot."
 # open virtual environment
 echo "Starting Virtual Environment..."
-source activate python_env
+source activate bot_env
 # start flask server
 echo "Launching Bot Server..."
 python3 bot.py &
@@ -11,7 +11,12 @@ python3 bot.py &
 echo $! >> ~/.trash_config
 # print verify token
 echo "Please Copy Verification Token for Callback:"
+echo "#########################################"
 echo $FACEBOOK_VERIFY_TOKEN
+echo "#########################################"
+echo "Use this code to establish a callback for your product in the Facebook Developer Portal."
+echo
+echo "You will also need the URL established by the ngrok http tunnel. This url will appear in 10 seconds..."
 sleep 10
 # open facebook dev website for verification
 echo "Opening facebook Dev Portal to Verify Callback..."
