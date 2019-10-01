@@ -1,31 +1,28 @@
 import os
-import random
 import time
+import logging
 from flask import Flask, request
 from pymessenger.bot import Bot
-import logging
 
 app = Flask(__name__)
 
 logger = logging.getLogger()
-#logger.setLevel(logging.INFO)
 logger.setLevel(logging.DEBUG)
 
 logging.info("Begin Logging.")
 
 ACCESS_TOKEN = os.environ['FACEBOOK_TOKEN']
-VERIFY_TOKEN = os.environ['FACEBOOK_VERIFY_TOKEN']
 bot = Bot (ACCESS_TOKEN)
 
-logging.info("Verify Token: {}".format(VERIFY_TOKEN))
+VERIFY_TOKEN = os.environ['FACEBOOK_VERIFY_TOKEN']
+logging.info("Verification Token: {}".format(VERIFY_TOKEN))
 
-##We will receive messages that Facebook sends our bot at this endpoint
 @app.route("/", methods=['GET', 'POST'])
 def receive_message():
 
     if request.method == 'GET':
         if request.args.get("hub.verify_token") == VERIFY_TOKEN:
-            logger.info("Verified.")
+            logger.info("Verified. Can take up to 15 minutes tom begine posting.")
             return request.args.get("hub.challenge")
         logger.error("Failed Verification.")
         return 'Invalid verification token'
@@ -35,25 +32,29 @@ def receive_message():
           for message in event['messaging']:
             if message.get('message'):
 
-                recipient_id = message['sender']['id']
+                logger.debug(message)
 
+                sender_id = message['sender']['id']
+
+                message_text, attachment = None, False
                 if message['message'].get('text'):
-                    send_message(recipient_id, get_message())
-
-                #if user sends us a GIF, photo,video, or any other non-text item
+                    message_text = message['message'].get('text')
                 if message['message'].get('attachments'):
-                    send_message(recipient_id, get_message())
+                    attachment = True
 
+                bot.send_text_message(sender_id, get_response(message_text, attachment))
+                logger.info("Response Sent.")
                 time.sleep(1)
 
+    logger.info("Message Processed")
     return "Message Processed"
 
-def get_message():
-    return random.choice(["You are stunning!", "We're proud of you.", "Keep on being you!", "We're greatful to know you :)"])
+###############################################################################
+# Intents
+###############################################################################
 
-def send_message(recipient_id, response):
-    bot.send_text_message(recipient_id, response)
-    return "success"
+def get_response(message_text, attachment):
+    return "Hi!"
 
 if __name__ == "__main__":
     app.run(debug=True)
