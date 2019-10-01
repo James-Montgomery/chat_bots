@@ -3,7 +3,6 @@ import inspect
 greetings_list = [
     "hi",
     "hello",
-    "yo",
     "aloha",
     "hola"
 ]

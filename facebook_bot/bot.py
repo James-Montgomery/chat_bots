@@ -3,6 +3,7 @@ import time
 import logging
 from flask import Flask, request
 from pymessenger.bot import Bot
+import inspect
 
 app = Flask(__name__)
 
@@ -42,9 +43,10 @@ def receive_message():
                 if message['message'].get('attachments'):
                     attachment = True
 
-                bot.send_text_message(sender_id, get_response(message_text, attachment))
-                logger.info("Response Sent.")
-                time.sleep(1)
+                if message_text or attachment:
+                    bot.send_text_message(sender_id, get_response(message_text, attachment))
+                    logger.info("Response Sent.")
+                    time.sleep(1)
 
     logger.info("Message Processed")
     return "Message Processed"
@@ -53,8 +55,30 @@ def receive_message():
 # Intents
 ###############################################################################
 
+greetings_list = [
+    "hi",
+    "hello",
+    "aloha",
+    "hola"
+]
+
 def get_response(message_text, attachment):
-    return "Hi!"
+
+    if attachment:
+        return "Sorry, I can't see attachments!"
+
+    message_text = message_text.lower()
+
+    if "what can you do" in message_text:
+        return "Whatever I want!"
+
+    if any(substring in message_text for substring in greetings_list):
+        return "Hello!"
+
+    default_response = inspect.cleandoc("""
+    Hmmm...I don't understand. Try asking `What can you do?`
+    """)
+    return default_response
 
 if __name__ == "__main__":
     app.run(debug=True)
