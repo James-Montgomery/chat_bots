@@ -3,7 +3,8 @@ import time
 import re
 import logging
 from slackclient import SlackClient
-import intents
+from intents import toby_intent
+from reminders import check_reminders
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -26,22 +27,32 @@ class SlackBot(object):
     def start(self):
         assert self._intent_defined, "Please define intent ontology before starting."
 
-        if self.slack_client.rtm_connect(with_team_state=False):
+        if self.slack_client.rtm_connect(auto_reconnect=True):
 
             logger.info("Starter Bot connected and running!")
             bot_id = self.slack_client.api_call("auth.test")["user_id"]
 
+            start = time.time()
             while True:
                 message, sender_id, mention_id, channel = self._parse_messages(self.slack_client.rtm_read())
 
                 if message:
                     if (self.allowed_channels is None) or (channel in self.allowed_channels):
-                        response = self._find_response(message, sender_id, mention_id, bot_id)
+                        response, user_name, icon_url = self._find_response(message, sender_id, mention_id, bot_id)
                         if response:
-                            self.post_response(response, channel)
+                            self.post_response(response, channel, user_name, icon_url)
+
+                # check reminders
+                reminder, channel = check_reminders(self.allowed_channels)
+                if reminder:
+                    self.post_response(reminder, channel)
+
+                # check run times for debugging
+                elapsed_time = time.time() - start
+                logger.debug(elapsed_time)
 
                 # delay to prevent spamming
-                time.sleep(1)
+                time.sleep(0.5)
         else:
             logger.error("Connection failed. Exception traceback printed above.")
 
@@ -68,14 +79,24 @@ class SlackBot(object):
                 return message, event["user"], mention_id, event["channel"]
         return None, None, None, None
 
-    def post_response(self, response, channel):
-        self.slack_client.api_call(
-            "chat.postMessage",
-            channel=channel,
-            text=response
-        )
+    def post_response(self, response, channel, username=None, icon_url=None):
+        if icon_url and username:
+            self.slack_client.api_call(
+                "chat.postMessage",
+                channel=channel,
+                text=response,
+                username=username,
+                icon_url=icon_url
+            )
+        else:
+            self.slack_client.api_call(
+                "chat.postMessage",
+                channel=channel,
+                text=response
+            )
+        logger.info("Message Sent.")
 
 if __name__ == "__main__":
-    bot = SlackBot(allowed_channels=["CNWNQP678"])
-    bot.define_intent_ontology(intents.toby_intent)
+    bot = SlackBot(slack_token=None, allowed_channels=["CNWNQP678"])
+    bot.define_intent_ontology(toby_intent)
     bot.start()
